@@ -1,8 +1,9 @@
 # maatify-admin-crud — design (draft for approval)
 
-Status: proposal. Source of truth for the extraction is
-`athar-platform/public/admin/assets/maatify/admin-kernel/js/` (`main` @ 2026-10-13).
-Nothing has been ported yet.
+Status: proposal. `athar-platform` is finished and not being touched further;
+`legacy/kernel/` (imported from `athar-platform/public/admin/assets/maatify/admin-kernel/js/`
+@ 2026-10-13) stays only as the baseline reference for the extraction. This library is
+now developed forward for future admin projects, not as a migration target for athar-platform.
 
 ## 1. Goal
 
@@ -43,8 +44,9 @@ row actions + API client + alerts**. The data table is *not* a separate package
    in `api_handler.js`). → `logger` with levels, off by default.
 9. **Hard-coded English** ("Rows", "No data found", "empty", "to … of … filtered from …",
    "Error Loading Data", "Retry", "Table configuration error"). → message catalog.
-10. Physical Tailwind classes (`text-left`, `ml-*`, `left-10`) — fine for LTR admin,
-    but decide RTL support explicitly (open question).
+10. Physical Tailwind classes (`text-left`, `ml-*`, `left-10`) assume LTR. RTL is
+    required (see §7), so these must become logical properties (`text-start`,
+    `ms-*`/`me-*`, `start-*`/`end-*`) throughout.
 
 ## 4. Proposed layout
 
@@ -57,9 +59,8 @@ src/
   filters/    bind-filters.js  build-params.js
   actions/    run-mutation.js  toggle-status.js  sort-modal.js
   page/       create-crud-page.js   // declarative: endpoint, columns, filters, actions
-              translations-page.js  // the ~25 *_translations pages become config
-  compat/     globals.js            // window.AdminPageBridge, ApiHandler, createTable… (legacy pages)
-dist/         maatify-admin-crud.esm.js  maatify-admin-crud.iife.js  maatify-admin-crud.compat.iife.js
+              translations-page.js  // config-driven translations pages
+dist/         maatify-admin-crud.esm.js  maatify-admin-crud.iife.js
 test/         vitest + jsdom
 ```
 
@@ -81,21 +82,21 @@ createCrudPage({
 });
 ```
 
-## 6. Migration (no big bang)
+## 6. Decisions
 
-0. In `athar-platform`: delete dead JS first (26 original files superseded by a used `-v2`,
-   62 files not loaded by any Twig/PHP — verify before deleting).
-1. Build the library with a **compat bundle exposing the current globals unchanged**.
-2. Swap the kernel `<script>` tags for the compat bundle; pages keep working.
-3. Move pages to `createCrudPage` / `TranslationsPage` gradually, translations pages first
-   (`country_translations-v2.js` vs `city_translations-v2.js` differ by 52 of 622 lines).
+- **Ownership/licence:** repo stays under the personal account; Maatify has the right
+  to use the library in its projects.
+- **RTL:** required. The admin must support RTL, not just LTR — see defect #10 in §3.
+- **Delivery:** npm package (e.g. GitHub Packages), not vendored `dist/`. There is no
+  single host to vendor into anymore — future admin projects each run
+  `npm install @maatify/admin-crud`. Remove `"private": true` from `package.json`
+  (or configure the GitHub Packages registry) before the first publish.
+- **No compat layer.** `compat/globals.js` (legacy `window.AdminPageBridge`/`ApiHandler`
+  globals) is dropped from the proposed layout — there is no athar-platform migration
+  to support it for.
 
 ## 7. Open questions
 
-- Ownership/licence: the code belongs to the Maatify/athar project; confirm this repo
-  (currently under a personal account) may hold it, or transfer it to the org.
-- Delivery: vendored `dist/` into `public/admin/assets` vs npm package (the host has no JS build today).
-- Tailwind: the library emits Tailwind utility classes; the host must scan `dist/`/`src/`
-  in `tailwind.config.js`, or we ship a CSS file.
-- RTL for admin: needed or LTR only?
+- Tailwind: the library emits Tailwind utility classes; each consuming project must scan
+  `dist/`/`src/` in its `tailwind.config.js`, or we ship a CSS file.
 - Does `AGENTS-ADMIN.md` (not read yet) constrain the admin JS?
