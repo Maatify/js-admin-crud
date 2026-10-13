@@ -1,0 +1,27 @@
+{
+  "name": "@maatify/admin-crud",
+  "version": "0.1.0",
+  "description": "Admin CRUD/page library: data table, filters, pagination, modals, row actions, API client.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "private": true,
+  "sideEffects": false,
+  "main": "./dist/maatify-admin-crud.esm.js",
+  "module": "./dist/maatify-admin-crud.esm.js",
+  "exports": {
+    ".": "./dist/maatify-admin-crud.esm.js",
+    "./iife": "./dist/maatify-admin-crud.iife.min.js",
+    "./src/*": "./src/*"
+  },
+  "files": ["dist", "src", "README.md"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0",
+    "vitest": "^3.0.0"
+  }
+}
