@@ -12,3 +12,5 @@ export { createDataTable } from './table/data-table.js';
 export { createSelection } from './table/selection.js';
 export { pageInfo, pageWindow } from './table/pagination.js';
 export { toCsv, toHtmlTable, neutralizeFormula } from './table/export.js';
+export { buildParams } from './filters/build-params.js';
+export { bindFilters } from './filters/bind-filters.js';
