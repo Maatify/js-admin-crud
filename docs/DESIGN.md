@@ -1,6 +1,7 @@
 # maatify-admin-crud — design (draft for approval)
 
-Status: proposal. `athar-platform` is finished and not being touched further;
+Status: implemented (see §4 — every module below now exists under `src/`).
+`athar-platform` is finished and not being touched further;
 `legacy/kernel/` (imported from `athar-platform/public/admin/assets/maatify/admin-kernel/js/`
 @ 2026-10-13) stays only as the baseline reference for the extraction. This library is
 now developed forward for future admin projects, not as a migration target for athar-platform.
@@ -48,6 +49,8 @@ row actions + API client + alerts**. The data table is *not* a separate package
     required (see §7), so these must become logical properties (`text-start`,
     `ms-*`/`me-*`, `start-*`/`end-*`) throughout.
 
+All ten are addressed in the current `src/` implementation.
+
 ## 4. Proposed layout
 
 ```
@@ -66,6 +69,11 @@ test/         vitest + jsdom
 
 Out of scope for v1 (kept in the host app): `select2`, `datetime-picker`, `admin-wysiwyg`
 (third-party wrappers) — revisit later.
+
+`page/translations-page.js` is a thin specialization of `createCrudPage` (same config,
+plus a required `update` action exposed as `saveTranslation()`) rather than a literal
+port of the ~25 legacy `*_translations` page scripts, which were never imported into
+this repo to port from.
 
 ## 5. Public API sketch
 
