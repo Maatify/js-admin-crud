@@ -42,7 +42,7 @@ export function createDataTable(options) {
 
   function cell(column, row) {
     const value = row[column.key];
-    if (typeof column.render === 'function') return `<td class="pl-3">${column.render(value, row)}</td>`;
+    if (typeof column.render === 'function') return `<td class="ps-3">${column.render(value, row)}</td>`;
     if (value === undefined || value === null || value === '') {
       return `<td><span class="text-gray-400 italic text-sm">${escapeHtml(t('table.empty_value'))}</span></td>`;
     }
@@ -50,7 +50,7 @@ export function createDataTable(options) {
       const src = safeUrl(value);
       return src ? `<td><img src="${escapeHtml(src)}" alt="" class="w-12 h-12 object-cover rounded"/></td>` : '<td></td>';
     }
-    return `<td class="pl-3 text-sm">${escapeHtml(value)}</td>`;
+    return `<td class="ps-3 text-sm">${escapeHtml(value)}</td>`;
   }
 
   function rowHtml(row, idx) {
@@ -60,7 +60,7 @@ export function createDataTable(options) {
     let box = '';
     if (options.selection) {
       const can = !selectable || selectable.has(id);
-      box = `<td class="pl-4">${can ? `<input type="checkbox" class="row-checkbox w-4 h-4" value="${escapeHtml(id)}" ${isSelected ? 'checked' : ''}>` : '<span class="text-gray-300 text-xs">—</span>'}</td>`;
+      box = `<td class="ps-4">${can ? `<input type="checkbox" class="row-checkbox w-4 h-4" value="${escapeHtml(id)}" ${isSelected ? 'checked' : ''}>` : '<span class="text-gray-300 text-xs">—</span>'}</td>`;
     }
     return `<tr class="${cls} transition-colors duration-150 hover:bg-blue-200/50 dark:hover:bg-blue-900/20">${box}${columns.map((c) => cell(c, row)).join('')}</tr>`;
   }
@@ -72,8 +72,8 @@ export function createDataTable(options) {
     const infoHtml = custom ? custom.info : escapeHtml(info.text); // custom info is trusted HTML by contract
     const total = custom ? custom.total : info.total;
     const totalPages = Math.ceil(total / info.perPage) || 1;
-    const head = columns.map((c) => `<th class="pr-6 pl-3 py-3 text-xs font-semibold uppercase tracking-wider text-gray-400">${escapeHtml(c.label ?? c.key)}</th>`).join('');
-    const selAll = options.selection ? '<th class="w-10 pl-4 py-3"><input type="checkbox" id="select-all" class="w-4 h-4"></th>' : '';
+    const head = columns.map((c) => `<th class="pe-6 ps-3 py-3 text-xs font-semibold uppercase tracking-wider text-gray-400">${escapeHtml(c.label ?? c.key)}</th>`).join('');
+    const selAll = options.selection ? '<th class="w-10 ps-4 py-3"><input type="checkbox" id="select-all" class="w-4 h-4"></th>' : '';
     const colspan = columns.length + (options.selection ? 1 : 0);
     const body = data.length
       ? data.map(rowHtml).join('')

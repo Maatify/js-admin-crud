@@ -15,9 +15,9 @@ const ALIASES = { d: 'danger', s: 'success', w: 'warning', i: 'info', error: 'da
 export function showAlert(type, message, duration = 5000, doc = document) {
   const kind = COLORS[type] ? type : ALIASES[type] || 'info';
   const el = doc.createElement('div');
-  el.className = `fixed top-6 left-10 min-w-[300px] z-[99999] ${COLORS[kind]} border px-4 py-3 rounded-lg shadow-lg max-w-md`;
+  el.className = `fixed top-6 start-10 min-w-[300px] z-[99999] ${COLORS[kind]} border px-4 py-3 rounded-lg shadow-lg max-w-md`;
   el.setAttribute('role', kind === 'danger' ? 'alert' : 'status');
-  el.innerHTML = `<div class="flex items-center justify-between"><span>${escapeHtml(message)}</span><button type="button" data-alert-close class="ml-4 text-lg" aria-label="Close">&times;</button></div>`;
+  el.innerHTML = `<div class="flex items-center justify-between"><span>${escapeHtml(message)}</span><button type="button" data-alert-close class="ms-4 text-lg" aria-label="Close">&times;</button></div>`;
   el.querySelector('[data-alert-close]').addEventListener('click', () => el.remove());
   doc.body.appendChild(el);
   if (duration > 0) setTimeout(() => el.remove(), duration);
