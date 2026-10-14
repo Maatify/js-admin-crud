@@ -3,6 +3,7 @@ import { t } from '../core/i18n.js';
 import { showAlert } from '../ui/alerts.js';
 import { exportCsv, exportExcel, exportPrint } from './export.js';
 import { pageInfo, pageWindow } from './pagination.js';
+import { createSelection } from './selection.js';
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
@@ -27,8 +28,7 @@ export function createDataTable(options) {
   const columns = options.columns || [];
   const primaryKey = options.primaryKey || 'id';
   const notify = options.notify || ((type, msg) => showAlert(type, msg));
-  const selected = new Set();
-  const selectable = options.selectableIds ? new Set([...options.selectableIds].map(String)) : null;
+  const selection = createSelection({ selectableIds: options.selectableIds });
   const state = { params: { page: 1, per_page: 10, ...(options.params || {}) }, data: [], pagination: null };
   const controller = new AbortController();
 
@@ -55,11 +55,11 @@ export function createDataTable(options) {
 
   function rowHtml(row, idx) {
     const id = String(row[primaryKey]);
-    const isSelected = selected.has(id);
+    const isSelected = selection.has(id);
     const cls = isSelected ? 'bg-blue-100 dark:bg-blue-900/20' : idx % 2 ? 'bg-gray-100 dark:bg-gray-700/20' : '';
     let box = '';
     if (options.selection) {
-      const can = !selectable || selectable.has(id);
+      const can = selection.canSelect(id);
       box = `<td class="ps-4">${can ? `<input type="checkbox" class="row-checkbox w-4 h-4" value="${escapeHtml(id)}" ${isSelected ? 'checked' : ''}>` : '<span class="text-gray-300 text-xs">—</span>'}</td>`;
     }
     return `<tr class="${cls} transition-colors duration-150 hover:bg-blue-200/50 dark:hover:bg-blue-900/20">${box}${columns.map((c) => cell(c, row)).join('')}</tr>`;
@@ -112,7 +112,7 @@ export function createDataTable(options) {
     sel.indeterminate = !all && boxes.some((b) => b.checked);
   }
 
-  const notifySelection = () => options.onSelectionChange && options.onSelectionChange(new Set(selected));
+  const notifySelection = () => options.onSelectionChange && options.onSelectionChange(selection.toSet());
 
   // One delegated listener set per instance, removed by destroy().
   const opts = { signal: controller.signal };
@@ -133,10 +133,10 @@ export function createDataTable(options) {
     if (e.target.id === 'select-all') {
       container.querySelectorAll('.row-checkbox').forEach((cb) => {
         cb.checked = e.target.checked;
-        e.target.checked ? selected.add(cb.value) : selected.delete(cb.value);
+        selection.toggle(cb.value, e.target.checked);
       });
     } else if (e.target.classList.contains('row-checkbox')) {
-      e.target.checked ? selected.add(e.target.value) : selected.delete(e.target.value);
+      selection.toggle(e.target.value, e.target.checked);
     } else return;
     syncSelectAll();
     notifySelection();
@@ -169,9 +169,9 @@ export function createDataTable(options) {
     reload: () => load(),
     getParams: () => ({ ...state.params }),
     getData: () => [...state.data],
-    getSelected: () => [...selected],
+    getSelected: () => selection.toArray(),
     clearSelection() {
-      selected.clear();
+      selection.clear();
       container.querySelectorAll('.row-checkbox').forEach((cb) => (cb.checked = false));
       syncSelectAll();
       notifySelection();

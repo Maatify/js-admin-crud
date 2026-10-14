@@ -6,5 +6,6 @@ export { createHttpClient } from './core/http.js';
 export { createEmitter } from './core/events.js';
 export { showAlert } from './ui/alerts.js';
 export { createDataTable } from './table/data-table.js';
+export { createSelection } from './table/selection.js';
 export { pageInfo, pageWindow } from './table/pagination.js';
 export { toCsv, toHtmlTable, neutralizeFormula } from './table/export.js';
