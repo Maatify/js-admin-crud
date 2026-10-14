@@ -17,3 +17,5 @@ export { bindFilters } from './filters/bind-filters.js';
 export { runMutation } from './actions/run-mutation.js';
 export { toggleStatus } from './actions/toggle-status.js';
 export { openSortModal } from './actions/sort-modal.js';
+export { createCrudPage } from './page/create-crud-page.js';
+export { createTranslationsPage } from './page/translations-page.js';
