@@ -14,3 +14,6 @@ export { pageInfo, pageWindow } from './table/pagination.js';
 export { toCsv, toHtmlTable, neutralizeFormula } from './table/export.js';
 export { buildParams } from './filters/build-params.js';
 export { bindFilters } from './filters/bind-filters.js';
+export { runMutation } from './actions/run-mutation.js';
+export { toggleStatus } from './actions/toggle-status.js';
+export { openSortModal } from './actions/sort-modal.js';
