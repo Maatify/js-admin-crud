@@ -13,6 +13,12 @@ const DEFAULTS = {
   'table.export_csv': 'CSV',
   'table.export_excel': 'Excel',
   'table.export_print': 'PDF',
+  'confirm.title': 'Are you sure?',
+  'confirm.ok': 'OK',
+  'confirm.cancel': 'Cancel',
+  'sort_modal.title': 'Change sort order',
+  'sort_modal.label': 'Sort order',
+  'sort_modal.save': 'Save',
 };
 
 let messages = { ...DEFAULTS };

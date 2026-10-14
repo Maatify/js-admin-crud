@@ -5,6 +5,9 @@ export { normalizeError, isStepUpRequired, errorMessage } from './core/errors.js
 export { createHttpClient } from './core/http.js';
 export { createEmitter } from './core/events.js';
 export { showAlert } from './ui/alerts.js';
+export { createModal } from './ui/modal.js';
+export { confirm } from './ui/confirm.js';
+export { createLoadingOverlay } from './ui/loading.js';
 export { createDataTable } from './table/data-table.js';
 export { createSelection } from './table/selection.js';
 export { pageInfo, pageWindow } from './table/pagination.js';
