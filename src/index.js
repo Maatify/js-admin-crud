@@ -1,5 +1,7 @@
 export { escapeHtml, html, raw, safeUrl, SafeHtml } from './core/dom.js';
 export { setMessages, resetMessages, t } from './core/i18n.js';
+export { createLogger, logger } from './core/logger.js';
+export { normalizeError, isStepUpRequired, errorMessage } from './core/errors.js';
 export { showAlert } from './ui/alerts.js';
 export { createDataTable } from './table/data-table.js';
 export { pageInfo, pageWindow } from './table/pagination.js';
