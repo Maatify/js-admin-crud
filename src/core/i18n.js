@@ -1,4 +1,5 @@
 const DEFAULTS = {
+  'table.page_jump': 'Go to page',
   'table.rows': 'Rows',
   'table.empty_title': 'No data found',
   'table.empty_hint': 'Try adjusting your filters or search criteria',

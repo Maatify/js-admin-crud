@@ -29,6 +29,7 @@ export const defaultTableClasses = Object.freeze({
   selectAllCheckbox: 'w-4 h-4',
 
   // body
+  tbody: '',
   tr: 'transition-colors duration-150 hover:bg-blue-200/50 dark:hover:bg-blue-900/20',
   trSelected: 'bg-blue-100 dark:bg-blue-900/20',
   trStriped: 'bg-gray-100 dark:bg-gray-700/20',
@@ -54,6 +55,10 @@ export const defaultTableClasses = Object.freeze({
   perPageLabel: 'text-xs text-gray-400',
   perPageSelect: 'h-7 border rounded-md text-sm',
   pagination: 'pagination flex flex-wrap items-center gap-1',
+  pageJumpItem: 'ms-2 flex items-center gap-1.5',
+  pageJumpInput: 'w-12 h-9 text-center rounded-lg border border-gray-300 text-sm',
+  pageJumpTotal: 'text-xs text-gray-400',
+  sortHandle: 'ms-1 opacity-40',
   pageButton: 'min-w-[36px] h-9 px-2 rounded-lg text-sm',
   pageButtonActive: 'bg-blue-500 text-white font-semibold',
   pageButtonInactive: 'text-gray-500 hover:bg-gray-100',

@@ -443,3 +443,45 @@ table: {
 Default output is byte-for-byte what it was before theming existed, across the
 populated, empty, selection and error states — asserted in
 `test/table-theming.test.js`.
+
+### What `classes` alone cannot do
+
+Four things in a host's table skin are behaviour or structure, not colour, so
+`classes` cannot reach them. Each has its own opt-in:
+
+```js
+table: {
+  clientSort: true,   // click a header to sort the loaded page, as the legacy kernel did
+  pageJump: true,     // a "go to page N" box at the end of the pagination list
+  classes: { tbody: 'bg-white dark:bg-gray-800' },
+  renderPerPage: ({ classes, sizes, perPage, label }) => html`
+    <label class="${classes.perPageLabel}">${raw(ROWS_ICON)}${label}
+      <select data-per-page class="${classes.perPageSelect}">${raw(sizes)}</select>
+    </label>`,
+}
+```
+
+- **`clientSort`** sorts the **current page** in the browser and never sends a
+  sort parameter — the same scope, and the same caveat, as the table it
+  replaces (server-side sorting is #17). Sortable headers carry
+  `data-sort-index` and a live `aria-sort`; opt a column out with
+  `sortable: false`. A custom `renderHeaderCell` receives `sortable` and
+  `sortDirection` so it can draw its own affordance and still be clickable —
+  keep `data-sort-index` on the `<th>` or clicking does nothing.
+- **`pageJump`** appears only when there is more than one page, and clamps what
+  the user types to the page count.
+- **`renderPerPage`** must keep `data-per-page` on the select.
+- **`classes.tbody`** defaults to no class at all.
+
+### Row-action buttons with an icon and a colour
+
+```js
+import { actionButton, actionButtonColors, raw } from '@maatify/admin-crud';
+
+actionButton({ action: 'edit', id: row.id, label: 'Edit', color: 'blue', icon: raw(EDIT_SVG) });
+```
+
+`color` composes a text + hover palette (with `dark:` variants) onto
+`className`; an unknown key is ignored. `icon` is markup **only** when it is a
+`SafeHtml` from `raw`/`html` — a plain string is escaped, so interpolating
+untrusted text cannot inject markup. `statusBadge` takes both too.
