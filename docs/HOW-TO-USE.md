@@ -177,9 +177,29 @@ Walking through the config:
   `search` can point at an input that lives outside the form (most admin
   pages render the global search box separately); it still gets merged into
   the same params object.
-- **`list.endpoint`** — a GET endpoint. Whatever the filters/pagination
-  produce is sent as the query string; the endpoint must return
+- **`list`** — `{ endpoint, method, params }`. By default the endpoint is
+  called with `GET` and whatever the filters/pagination produce is sent as the
+  query string. It must return
   `{ data: [...], pagination: { page, per_page, total, filtered? } }`.
+
+  Set `method: 'POST'` for endpoints that expect a JSON body instead, and use
+  `params(tableParams)` to reshape the table's flat params into whatever the
+  endpoint actually wants — the only way to express a nested body:
+
+  ```js
+  list: {
+    endpoint: `plans/${planId}/features/query`,
+    method: 'POST',
+    params: (p) => ({
+      page: p.page,
+      per_page: p.per_page,
+      search: { global: p.global, columns: { feature_key: p.feature_key } },
+    }),
+  }
+  ```
+
+  `params` works for `GET` too, where it is the place to rename or drop a
+  parameter before it reaches the query string.
 - **`actions`** — each key becomes `page.actions.<key>(overrides)`. The
   object under each key is `runMutation()`'s config (endpoint, method,
   confirmMessage, successMessage, onSuccess, …); `overrides` is merged over
