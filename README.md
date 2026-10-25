@@ -70,6 +70,16 @@ as the convenience `saveTranslation(id, value)`.
 `bindFilters`/`buildParams`, `normalizeError`, and `createLogger` are all exported individually
 for pages that don't need the full `createCrudPage` composition.
 
+`actionButton()` and `statusBadge()` build row-action markup that is escaped by construction —
+use them (or `` html`…` ``) inside `column.render`, whose return value the table trusts as raw HTML:
+
+```js
+import { actionButton, statusBadge } from '@maatify/admin-crud';
+
+{ key: 'active', label: 'Status', render: (active, row) => statusBadge({ active, id: row.id }) }
+{ key: 'id', label: '', render: (id) => actionButton({ action: 'edit', id, label: 'Edit' }) }
+```
+
 `npm test` (vitest + jsdom) · `npm run build` (ESM + browser IIFE `window.MaatifyAdminCrud`).
 Design and roadmap: `docs/DESIGN.md`.
 

@@ -67,7 +67,7 @@ and an image column, a status filter, a global search box, and three actions
 (toggle active, change sort order, delete):
 
 ```js
-import { createCrudPage, html, openSortModal } from '@maatify/admin-crud';
+import { createCrudPage, actionButton, statusBadge, html, openSortModal } from '@maatify/admin-crud';
 
 const page = createCrudPage({
   // One shared HTTP client for every call this page makes.
@@ -87,19 +87,16 @@ const page = createCrudPage({
       {
         key: 'active',
         label: 'Status',
-        // column.render() output is TRUSTED HTML — escape anything that isn't
-        // a literal you wrote yourself. `html` escapes interpolations for you.
-        render: (active) => html`<span class="${active ? 'text-green-600' : 'text-gray-400'}">${active ? 'Active' : 'Inactive'}</span>`,
+        // column.render() output is TRUSTED HTML. statusBadge/actionButton
+        // escape everything they emit, so there is nothing to get wrong here.
+        render: (active, row) => statusBadge({ active, id: row.id }),
       },
       {
         key: 'id',
         label: 'Actions',
         render: (id, row) => html`
-          <button type="button" data-action="toggle" data-id="${id}" data-active="${row.active ? 1 : 0}">
-            ${row.active ? 'Deactivate' : 'Activate'}
-          </button>
-          <button type="button" data-action="sort" data-id="${id}" data-value="${row.sort_order ?? 0}">Sort</button>
-          <button type="button" data-action="delete" data-id="${id}">Delete</button>
+          ${actionButton({ action: 'sort', id, label: 'Sort', data: { value: row.sort_order ?? 0 } })}
+          ${actionButton({ action: 'delete', id, label: 'Delete', className: 'text-xs px-3 py-1.5 border rounded-md text-red-600' })}
         `,
       },
     ],
@@ -133,7 +130,8 @@ document.querySelector('#languages-table').addEventListener('click', (e) => {
   const id = Number(btn.dataset.id);
 
   if (btn.dataset.action === 'toggle') {
-    page.actions.toggle({ payload: { id, active: btn.dataset.active !== '1' } });
+    // statusBadge put the value to flip to in data-next
+    page.actions.toggle({ payload: { id, active: Number(btn.dataset.next) } });
   } else if (btn.dataset.action === 'delete') {
     page.actions.delete({ payload: { id } });
   } else if (btn.dataset.action === 'sort') {
@@ -161,6 +159,24 @@ Walking through the config:
 - **`table`** — identical to `createDataTable()`'s options (see its doc
   comment in `src/table/data-table.js`), minus `fetchPage`, which
   `createCrudPage` builds for you from `list.endpoint`.
+- **`table.columns[].render`** — its return value is inserted as **trusted
+  HTML**, so never build it by hand with a plain template literal. Use
+  `actionButton()` / `statusBadge()`, which escape by construction, or the
+  `` html`…` `` tag, which escapes every interpolation:
+
+  | Helper | Emits | For |
+  |---|---|---|
+  | `actionButton({ action, id, label, data, className, title, disabled })` | `<button type="button" data-action="…" data-id="…" …>` | any row action (edit, delete, sort, …) |
+  | `statusBadge({ active, id, onLabel, offLabel, action, data })` | the same button, labelled Active/Inactive and carrying `data-next` (the value to flip to) | the active/inactive column |
+
+  Keys in `data` are camelCase and become kebab-case attributes, matching how
+  the DOM maps `dataset` (`{ sortOrder: 3 }` → `data-sort-order="3"`, read back
+  as `btn.dataset.sortOrder`). Values are escaped; an attribute *name* that
+  could break out of the markup throws instead of being emitted. Both return a
+  `SafeHtml`, so they can be returned straight from `render()` and also nested
+  inside an `` html`…` `` template without being escaped twice. Pass
+  `action: null` to `statusBadge` for a read-only status cell (a `<span>`, no
+  action wiring).
 - **`filters`** — optional. Omit it entirely for a page with no filter form.
   `search` can point at an input that lives outside the form (most admin
   pages render the global search box separately); it still gets merged into
