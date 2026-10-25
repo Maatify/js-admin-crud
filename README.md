@@ -1,6 +1,31 @@
-# @maatify/admin-crud
+<div align="center">
 
-Admin CRUD/page library (data table, pagination, export, alerts, safe HTML helpers).
+# Maatify Admin CRUD
+
+![Maatify.dev](https://www.maatify.dev/assets/img/img/maatify_logo_white.svg)
+
+[![Status](https://img.shields.io/badge/Status-Pre--release-orange)](https://github.com/Maatify/js-admin-crud)
+[![Version](https://img.shields.io/badge/Version-0.1.0-orange)](package.json)
+[![ESM](https://img.shields.io/badge/Module-ESM%20%2B%20IIFE-F7DF1E.svg)](package.json)
+[![Dependencies: Zero](https://img.shields.io/badge/Dependencies-Zero-brightgreen.svg)](package.json)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+
+[![Registry: GitHub Packages](https://img.shields.io/badge/Registry-GitHub%20Packages-blue)](https://github.com/Maatify/js-admin-crud/packages)
+[![Maatify Ecosystem](https://img.shields.io/badge/Maatify-Ecosystem-blueviolet)](https://github.com/Maatify)
+[![Install 0.1.0](https://img.shields.io/badge/Install-%40maatify%2Fadmin--crud-blue)](#installing)
+
+[![How To Use](https://img.shields.io/badge/Docs-How%20To%20Use-blue.svg)](docs/HOW-TO-USE.md)
+[![Design](https://img.shields.io/badge/Docs-Design-blue.svg)](docs/DESIGN.md)
+[![Parity](https://img.shields.io/badge/Docs-Parity-blue.svg)](docs/PARITY.md)
+[![Security Notes](https://img.shields.io/badge/Docs-Security%20Notes-blue.svg)](docs/SECURITY-AND-IMPROVEMENTS.md)
+[![Examples](https://img.shields.io/badge/Docs-Examples-blue.svg)](examples/)
+
+Admin CRUD/page library for the browser: data table, filters, pagination, modals, row actions, API client.
+
+</div>
+
+---
+
 Extracted from the Athar admin kernel; the original copy is kept in `legacy/kernel/` as a baseline.
 
 ## Installing
