@@ -32,6 +32,13 @@ const attrClass = (value) => (value ? ` class="${value}"` : '');
  *    one. `id` is the matching row's primaryKey value (correctly typed), falling
  *    back to the raw data-id string when no loaded row matches; `row` is null then.
  *  - rowActionSelector: override the '[data-action]' convention
+ *  - clientSort: true to sort the CURRENT page in the browser when a header is
+ *    clicked (what the legacy kernel table did — it never sent a sort param).
+ *    Headers then carry data-sort-index and a sort handle; aria-sort reflects
+ *    the direction. Server-side sorting stays out of scope (see #17).
+ *  - pageJump: true to append a "go to page" box to the pagination list
+ *  - renderPerPage({classes, sizes, perPage, label}): replace the rows-per-page
+ *    control wholesale, for a host whose own control carries an icon
  *  - notify(type, message) => alert function (defaults to showAlert)
  *  - document / window: injectable for tests
  *
@@ -62,6 +69,8 @@ export function createDataTable(options) {
   const rowActionSelector = options.rowActionSelector || '[data-action]';
   const c = { ...defaultTableClasses, ...(options.classes || {}) };
   const state = { params: { page: 1, per_page: 10, ...(options.params || {}) }, data: [], pagination: null };
+  // Current-page sort, applied at render time so re-renders keep the order.
+  const sortState = { index: null, asc: true };
   const controller = new AbortController();
 
   if (!container || !columns.length || typeof options.fetchPage !== 'function') {
@@ -102,10 +111,38 @@ export function createDataTable(options) {
   /** One <th>. Replaceable wholesale, since a sort affordance is structure, not colour. */
   function headerCell(column, index) {
     const label = column.label ?? column.key;
+    const sortable = !!options.clientSort && column.sortable !== false;
+    const dir = sortState.index === index ? (sortState.asc ? 'ascending' : 'descending') : 'none';
     if (typeof options.renderHeaderCell === 'function') {
-      return String(options.renderHeaderCell(column, { classes: c, index, label }));
+      return String(options.renderHeaderCell(column, { classes: c, index, label, sortable, sortDirection: dir }));
     }
-    return `<th${attrClass(c.th)}>${escapeHtml(label)}</th>`;
+    if (!sortable) return `<th${attrClass(c.th)}>${escapeHtml(label)}</th>`;
+    return `<th data-sort-index="${index}" aria-sort="${dir}"${attrClass(c.th)}>${escapeHtml(label)}<span${attrClass(c.sortHandle)} aria-hidden="true">\u2195</span></th>`;
+  }
+
+  /**
+   * Order the loaded rows for display. Numeric when both cells parse as
+   * numbers, otherwise a locale compare with numeric collation — the same
+   * rule the legacy table used.
+   */
+  function sortedData() {
+    if (sortState.index === null) return state.data;
+    const column = columns[sortState.index];
+    if (!column) return state.data;
+    const read = (row) => {
+      const v = row[column.key];
+      return v === null || v === undefined ? '' : v;
+    };
+    return [...state.data].sort((a, b) => {
+      const x = read(a);
+      const y = read(b);
+      const nx = Number(x);
+      const ny = Number(y);
+      const cmp = x !== '' && y !== '' && !Number.isNaN(nx) && !Number.isNaN(ny)
+        ? nx - ny
+        : String(x).localeCompare(String(y), undefined, { numeric: true });
+      return sortState.asc ? cmp : -cmp;
+    });
   }
 
   /** The export group's contents. Buttons must keep their data-export attribute. */
@@ -130,8 +167,15 @@ export function createDataTable(options) {
     return `<li><button type="button" data-page="${page}" aria-label="${escapeHtml(label)}" class="${c.navButton} ${disabled ? c.navButtonDisabled : ''}" ${disabled ? 'disabled' : ''}>${text}</button></li>`;
   }
 
+  /** The optional "go to page N" box at the end of the pagination list. */
+  function pageJumpItem(page, totalPages) {
+    if (!options.pageJump || totalPages <= 1) return '';
+    return `<li${attrClass(c.pageJumpItem)}><input type="number" min="1" max="${totalPages}" value="${page}" data-page-jump aria-label="${escapeHtml(t('table.page_jump'))}"${attrClass(c.pageJumpInput)}><span${attrClass(c.pageJumpTotal)}>/ ${totalPages}</span></li>`;
+  }
+
   function render() {
-    const { data, pagination } = state;
+    const { pagination } = state;
+    const data = sortedData();
     const custom = typeof options.getPaginationInfo === 'function' ? options.getPaginationInfo(pagination, state.params) : null;
     const info = pageInfo(pagination, Number(state.params.per_page) || 10);
     const infoHtml = custom ? custom.info : escapeHtml(info.text); // custom info is trusted HTML by contract
@@ -148,6 +192,10 @@ export function createDataTable(options) {
       .join('');
     const nav = (kind, label, page, disabled, text) => paginationButton({ page, label, text, active: false, disabled, kind });
     const sizes = PAGE_SIZES.map((n) => `<option value="${n}" ${n === info.perPage ? 'selected' : ''}>${n}</option>`).join('');
+    const perPageControl = (opts2, perPage) =>
+      typeof options.renderPerPage === 'function'
+        ? String(options.renderPerPage({ classes: c, sizes: opts2, perPage, label: t('table.rows') }))
+        : `<label${attrClass(c.perPageLabel)}>${escapeHtml(t('table.rows'))} <select data-per-page${attrClass(c.perPageSelect)}>${opts2}</select></label>`;
     container.innerHTML = `
 <div${attrClass(c.container)}>
   <div${attrClass(c.header)}>
@@ -156,11 +204,11 @@ export function createDataTable(options) {
       ${exportButtons()}
     </div>
   </div>
-  <div${attrClass(c.tableWrap)}><table${attrClass(c.table)}><thead><tr${attrClass(c.theadRow)}>${selAll}${head}</tr></thead><tbody>${body}</tbody></table></div>
+  <div${attrClass(c.tableWrap)}><table${attrClass(c.table)}><thead><tr${attrClass(c.theadRow)}>${selAll}${head}</tr></thead><tbody${attrClass(c.tbody)}>${body}</tbody></table></div>
   <footer${attrClass(c.footer)}>
     <div${attrClass(c.footerStart)}><span${attrClass(c.pageInfo)} data-page-info>${infoHtml}</span>
-      <label${attrClass(c.perPageLabel)}>${escapeHtml(t('table.rows'))} <select data-per-page${attrClass(c.perPageSelect)}>${sizes}</select></label></div>
-    <nav><ul${attrClass(c.pagination)}>${totalPages > 1 ? nav('first', 'First', 1, info.page <= 1, '«') + nav('prev', 'Previous', info.page - 1, info.page <= 1, '‹') + pages + nav('next', 'Next', info.page + 1, info.page >= totalPages, '›') + nav('last', 'Last', totalPages, info.page >= totalPages, '»') : ''}</ul></nav>
+      ${perPageControl(sizes, info.perPage)}</div>
+    <nav><ul${attrClass(c.pagination)}>${totalPages > 1 ? nav('first', 'First', 1, info.page <= 1, '«') + nav('prev', 'Previous', info.page - 1, info.page <= 1, '‹') + pages + nav('next', 'Next', info.page + 1, info.page >= totalPages, '›') + nav('last', 'Last', totalPages, info.page >= totalPages, '»') + pageJumpItem(info.page, totalPages) : ''}</ul></nav>
   </footer>
 </div>`;
     syncSelectAll();
@@ -198,6 +246,13 @@ export function createDataTable(options) {
       return;
     }
     if (e.target.closest('[data-retry]')) return void load();
+    const th = options.clientSort ? e.target.closest('th[data-sort-index]') : null;
+    if (th && container.contains(th)) {
+      const index = Number(th.dataset.sortIndex);
+      sortState.asc = sortState.index === index ? !sortState.asc : true;
+      sortState.index = index;
+      return void render();
+    }
     if (typeof options.onRowAction !== 'function') return;
     const actionEl = e.target.closest(rowActionSelector);
     if (!actionEl || actionEl.disabled) return;
@@ -206,6 +261,13 @@ export function createDataTable(options) {
     // instead of the string every dataset read returns.
     const id = row ? row[primaryKey] : actionEl.dataset.id;
     options.onRowAction(actionEl.dataset.action, { id, row, dataset: { ...actionEl.dataset }, element: actionEl });
+  }, opts);
+  container.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !e.target.matches('[data-page-jump]')) return;
+    e.preventDefault();
+    const totalPages = Number(e.target.max) || 1;
+    const n = Math.min(Math.max(1, Number(e.target.value) || 1), totalPages);
+    load({ page: n });
   }, opts);
   container.addEventListener('change', (e) => {
     if (e.target.matches('[data-per-page]')) return void load({ per_page: Number(e.target.value), page: 1 });
