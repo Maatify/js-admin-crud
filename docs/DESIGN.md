@@ -93,9 +93,11 @@ createCrudPage({
 ## 6. Decisions
 
 - **Ownership/licence:** the repository lives under the `Maatify` organisation and the
-  library is released under the MIT licence (see `LICENSE`). This supersedes the earlier
-  plan of keeping the repo on a personal account with Maatify holding usage rights —
-  under MIT the usage-rights carve-out is unnecessary.
+  library is **proprietary to Maatify** — all rights reserved, no open-source licence
+  granted (see `LICENSE`). This supersedes the earlier plan of keeping the repo on a
+  personal account with Maatify holding usage rights: ownership now sits with Maatify
+  directly, so there is no separate carve-out to express. Note that public repository
+  visibility does not make the library open source.
 - **RTL:** required. The admin must support RTL, not just LTR — see defect #10 in §3.
 - **Delivery:** npm package published to GitHub Packages, not vendored `dist/`. There is
   no single host to vendor into anymore — future admin projects each run

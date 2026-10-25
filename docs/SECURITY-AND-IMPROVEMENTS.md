@@ -121,6 +121,12 @@ jobs:
 ### 2.4 حالة النشر (`private: true`, `UNLICENSED`)
 موثّقة بالفعل في `DESIGN.md` §6 و`README.md` كقرار مؤقت. فقط تذكير: لو هتتحوّل فعليًا لـ GitHub Packages، لازم ضبط `publishConfig.registry` وإزالة `private` و`UNLICENSED` قبل أول `npm publish` (مذكور بالفعل، بس سهل يتنسى).
 
+> **تم (#7).** `private: true` اتشالت، و`publishConfig.registry` بقى
+> `https://npm.pkg.github.com`، والرخصة اتحسمت كرخصة **مملوكة لـ Maatify**
+> (`"license": "SEE LICENSE IN LICENSE"` + ملف `LICENSE`) — مش مفتوحة المصدر.
+> `publishConfig.registry` هو اللي بيمنع نشر مكتبة مملوكة على npm العام بالغلط،
+> بما إن `private: true` كانت هتمنع النشر على GitHub Packages نفسه.
+
 ### 2.5 `i18n` state عالمي (module-level)
 `src/core/i18n.js` بيستخدم متغيّر `messages` واحد على مستوى الموديول. لو صفحة واحدة فيها أكتر من `createCrudPage`/`createDataTable` بلغتين مختلفتين في نفس الوقت (نادر لكن وارد في تطبيقات متعددة الـ widgets)، آخر `setMessages()` بيكسب على الكل. مش باگ حاليًا (الاستخدام الموثّق هو صفحة = لغة واحدة)، لكن يستاهل سطر توضيح في التوثيق إن `setMessages` عالمية مش per-instance.
 
