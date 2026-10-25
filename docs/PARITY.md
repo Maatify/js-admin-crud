@@ -210,3 +210,34 @@ for g in ApiHandler AdminUIComponents AdminPageBridge Select2 initWysiwyg; do
   printf "%-20s %s\n" "$g" "$(grep -rl --include='*.js' "$g" . | wc -l)"
 done
 ```
+
+## 6. Acceptance proof: plan-features
+
+`examples/plan-features.js` is athar-platform's plan-features page rewritten on
+this library: **326 lines in one file**, replacing 597 lines across four
+(`-helpers.js` + `-modals.js` + `-actions.js` + `-with-components.js`) that were
+loaded in a fixed `<script>` order and communicated through `window.*`.
+
+`test/plan-features-parity.test.js` runs that exact file — read off disk, not
+reimplemented — against the DOM contract of its Twig template and a mocked API,
+asserting 21 behaviours of the legacy page: the POST list body, every column
+renderer, per-capability button visibility, the `can_list` permission notice,
+filter/search/reset/clear, the "filtered from N total" note, query-string
+prefill, both modals' prefill and input toggling, both form payload shapes,
+confirm-then-unassign, modal close by button and by Escape, pagination, and that
+only one click listener is attached to the table container.
+
+What the rewrite required from the library, beyond #12/#14/#15: `list.method`
+and `list.params` (#31). What it did **not** require: any change to the Twig
+template.
+
+Two legacy details worth recording, because they shaped the rewrite:
+
+- **The filter controls carry `id` but no `name`**, so `bindFilters` cannot read
+  them through `FormData`. It is still used for the *events* (submit, Enter,
+  select-change), while the values are read by id in `list.params`. Adding
+  `name` attributes to those five inputs would remove that indirection.
+- **`getPaginationInfo` receives the table's own flat params**, not the nested
+  body `list.params` produced, so a page that nests its filters must derive
+  "is anything filtered?" from its own filter state rather than from the
+  argument.
