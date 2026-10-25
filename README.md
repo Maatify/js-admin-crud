@@ -102,7 +102,8 @@ import { actionButton, statusBadge } from '@maatify/admin-crud';
 ```
 
 `npm test` (vitest + jsdom) · `npm run build` (ESM + browser IIFE `window.MaatifyAdminCrud`).
-Design and roadmap: `docs/DESIGN.md`.
+Design and roadmap: `docs/DESIGN.md`. What the library replaces from the legacy
+admin-kernel, and what it deliberately does not: `docs/PARITY.md`.
 
 ## Licence
 
