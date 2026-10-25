@@ -16,6 +16,7 @@ export { toCsv, toHtmlTable, neutralizeFormula } from './table/export.js';
 export { buildParams } from './filters/build-params.js';
 export { bindFilters } from './filters/bind-filters.js';
 export { runMutation } from './actions/run-mutation.js';
+export { bindFormAction } from './actions/bind-form-action.js';
 export { toggleStatus } from './actions/toggle-status.js';
 export { openSortModal } from './actions/sort-modal.js';
 export { createCrudPage } from './page/create-crud-page.js';

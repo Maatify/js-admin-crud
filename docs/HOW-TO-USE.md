@@ -116,6 +116,7 @@ const page = createCrudPage({
   actions: {
     toggle: { endpoint: 'languages/set-active', successMessage: 'Status updated' },
     delete: { endpoint: 'languages/delete', confirmMessage: 'Delete this language?', successMessage: 'Deleted' },
+    create: { endpoint: 'languages/create', successMessage: 'Language created' },
   },
 
   // Row actions run on the table's own delegated listener — you never add one.
@@ -217,7 +218,7 @@ it with `createModal()` and save it through the same `http` client the page
 already has:
 
 ```js
-import { createModal } from '@maatify/admin-crud';
+import { createModal, bindFormAction } from '@maatify/admin-crud';
 
 function openCreateModal() {
   const modal = createModal({
@@ -232,19 +233,52 @@ function openCreateModal() {
       </form>`,
   });
 
-  modal.body.querySelector('[data-create-form]').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = new FormData(e.target).get('name');
-    const result = await page.http.post('languages/create', { name });
-    if (result.success) {
-      modal.close();
-      await page.table.reload();
-    }
+  bindFormAction(modal.body.querySelector('[data-create-form]'), {
+    action: (payload) => page.actions.create({ payload }),
+    onSuccess: () => modal.close(),
   });
 
   modal.open();
 }
 ```
+
+`bindFormAction` does the whole submit dance for you: `preventDefault`, disable
+the submit button, build the payload from the form's fields, run the action,
+call `onSuccess` only if it succeeded, then re-enable the button — and it
+ignores a second submit while the first is still in flight, so a double-click
+can't create two records.
+
+The same helper covers edit, because `action` is just a function:
+
+```js
+bindFormAction(form, {
+  // Everything the form holds, plus whatever isn't a plain field.
+  buildPayload: async (f) => ({
+    name: f.elements.name.value,
+    image: await uploadPendingImage(),
+    active: f.elements.active.checked ? 1 : 0,
+  }),
+  action: (payload) => (product ? page.actions.update({ payload: { ...payload, id: product.id } }) : page.actions.create({ payload })),
+  onSuccess: () => modal.close(),
+});
+```
+
+Worth knowing:
+
+- **Empty fields are kept.** The default payload is every field of the form
+  including the empty ones, because clearing a field in an edit form has to
+  send `''` rather than omit the key. (This is the opposite of `buildParams`'s
+  own default, which drops empties — right for filters, wrong for edits.)
+- **`f.elements.name`, not `f.name`.** On a form element, `.name` is the
+  form's own name property, not the field called `name`.
+- **It does not alert when the action *returns* a failure** — `runMutation`
+  (and so every `page.actions.*`) already shows the error alert, and alerting
+  again here would show the same message twice. It alerts only for a *thrown*
+  error, which is the case nothing else covers. Pass `onFailure` to react to a
+  returned failure, or `onError` to replace the default alert.
+- **An action that returns nothing counts as success** — only an explicit
+  `{ success: false }` is treated as a failure.
+- It returns an `unbind()` function, like `bindFilters`.
 
 ## 6. Loading overlay
 

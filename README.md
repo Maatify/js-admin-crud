@@ -78,6 +78,19 @@ as the convenience `saveTranslation(id, value)`.
 `bindFilters`/`buildParams`, `normalizeError`, and `createLogger` are all exported individually
 for pages that don't need the full `createCrudPage` composition.
 
+`bindFormAction(form, { action, onSuccess })` handles a create/edit form's whole submit
+cycle — preventDefault, disable the submit button, build the payload, run the action,
+re-enable — and ignores a repeat submit while one is in flight:
+
+```js
+import { bindFormAction } from '@maatify/admin-crud';
+
+bindFormAction(form, {
+  action: (payload) => page.actions.create({ payload }),
+  onSuccess: () => modal.close(),
+});
+```
+
 `actionButton()` and `statusBadge()` build row-action markup that is escaped by construction —
 use them (or `` html`…` ``) inside `column.render`, whose return value the table trusts as raw HTML:
 
