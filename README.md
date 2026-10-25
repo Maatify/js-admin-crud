@@ -3,6 +3,26 @@
 Admin CRUD/page library (data table, pagination, export, alerts, safe HTML helpers).
 Extracted from the Athar admin kernel; the original copy is kept in `legacy/kernel/` as a baseline.
 
+## Installing
+
+The package is published to **GitHub Packages** under the `@maatify` scope. Point the
+scope at that registry once, then install as usual:
+
+```
+# .npmrc
+@maatify:registry=https://npm.pkg.github.com
+```
+
+```bash
+npm install @maatify/admin-crud
+```
+
+Installing straight from Git also works — `prepare` builds `dist/` during install:
+
+```bash
+npm install github:Maatify/js-admin-crud
+```
+
 ## Just the table
 
 ```js
@@ -20,7 +40,7 @@ await table.load();
 - One instance per container, no globals; call `destroy()` to remove listeners.
 - Selection is scoped to the currently rendered page — it does not persist across pages.
 - Messages are overridable with `setMessages({...})` (see `src/core/i18n.js` for keys).
-- The package is `private` for now; remove `"private": true` (or publish to GitHub Packages) before `npm publish`.
+- Licensed MIT, published to GitHub Packages (`@maatify` scope) — see "Installing" below.
 
 ## A full list/CRUD page
 
@@ -52,3 +72,7 @@ for pages that don't need the full `createCrudPage` composition.
 
 `npm test` (vitest + jsdom) · `npm run build` (ESM + browser IIFE `window.MaatifyAdminCrud`).
 Design and roadmap: `docs/DESIGN.md`.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).
