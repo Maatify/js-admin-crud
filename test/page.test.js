@@ -23,6 +23,68 @@ describe('createCrudPage', () => {
     page.destroy();
   });
 
+  it('posts the list request with a JSON body when list.method is POST', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ data: [{ id: 1, name: 'A' }], pagination: { page: 1, per_page: 10, total: 1 } }));
+    const page = createCrudPage({
+      http: { baseUrl: '/api', fetch: fetchImpl },
+      table: { container: '#table', columns: cols },
+      list: { endpoint: 'plans/1/features/query', method: 'POST' },
+    });
+    await page.table.load();
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe('/api/plans/1/features/query'); // no query string
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ page: 1, per_page: 10 });
+    page.destroy();
+  });
+
+  it('reshapes params through list.params, including into a nested body', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ data: [], pagination: { page: 1, per_page: 10, total: 0 } }));
+    const page = createCrudPage({
+      http: { baseUrl: '/api', fetch: fetchImpl },
+      table: { container: '#table', columns: cols },
+      list: {
+        endpoint: 'q',
+        method: 'POST',
+        params: (p) => ({ page: p.page, per_page: p.per_page, search: { global: p.search, columns: { feature_key: p.feature_key } } }),
+      },
+    });
+    await page.table.load({ search: 'abc', feature_key: 'x' });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      page: 1,
+      per_page: 10,
+      search: { global: 'abc', columns: { feature_key: 'x' } },
+    });
+    page.destroy();
+  });
+
+  it('still defaults to a GET query string when list.method is omitted', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ data: [], pagination: { page: 1, per_page: 10, total: 0 } }));
+    const page = createCrudPage({
+      http: { baseUrl: '/api', fetch: fetchImpl },
+      table: { container: '#table', columns: cols },
+      list: { endpoint: 'languages/query' },
+    });
+    await page.table.load();
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe('/api/languages/query?page=1&per_page=10');
+    expect(init.method).toBe('GET');
+    expect(init.body).toBeUndefined();
+    page.destroy();
+  });
+
+  it('list.params can reshape a GET query string too', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ data: [], pagination: { page: 1, per_page: 10, total: 0 } }));
+    const page = createCrudPage({
+      http: { baseUrl: '/api', fetch: fetchImpl },
+      table: { container: '#table', columns: cols },
+      list: { endpoint: 'q', params: (p) => ({ p: p.page, n: p.per_page }) },
+    });
+    await page.table.load();
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/q?p=1&n=10');
+    page.destroy();
+  });
+
   it('passes a top-level onRowAction down to the table', async () => {
     const onRowAction = vi.fn();
     const fetchImpl = vi.fn(async () => jsonResponse({ data: [{ id: 4, name: 'Arabic' }], pagination: { page: 1, per_page: 10, total: 1 } }));

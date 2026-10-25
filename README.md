@@ -54,6 +54,7 @@ const page = createCrudPage({
   http: { baseUrl: '/api', headers: () => ({ 'X-CSRF-Token': token() }), locale: () => lang },
   table: { container: '#table-container', columns: [...], primaryKey: 'id' },
   filters: { form: '#filters', search: '#global-search' },
+  // GET by default; add method:'POST' and params:(p)=>({…}) for a JSON-body endpoint.
   list: { endpoint: 'languages/query' },
   actions: { setActive: { endpoint: 'languages/set-active', successMessage: 'Updated' } },
   // Runs on the table's own delegated listener — no second click handler per page.

@@ -13,7 +13,11 @@ import { runMutation } from '../actions/run-mutation.js';
  *  - http: createHttpClient() options
  *  - table: createDataTable() options, minus `fetchPage` (built from `list`)
  *  - filters: bindFilters() options, minus `onApply` (reloads the table)
- *  - list: { endpoint } — GET endpoint the table fetches pages from
+ *  - list: { endpoint, method, params, operation } — the endpoint the table fetches
+ *    pages from. `method` defaults to 'GET' (params become a query string); set it
+ *    to 'POST' for endpoints that expect a JSON body. `params(tableParams)` reshapes
+ *    the table's flat params before they are sent, which is the only way to express
+ *    a nested body such as { search: { global, columns } }.
  *  - actions: { name: runMutation() options } — call as page.actions.name(overrides)
  *  - onRowAction(action, { id, row, dataset, element }) — row-action handler, passed
  *    straight to the table (may also be given as `table.onRowAction`; this wins).
@@ -30,8 +34,13 @@ export function createCrudPage(config = {}) {
 
   const http = createHttpClient(httpConfig);
 
+  const listMethod = String(list.method || 'GET').toUpperCase();
+
   const fetchPage = async (params) => {
-    const result = await http.get(list.endpoint, params);
+    // `list.params` is the one place to reshape what the table produces into
+    // what the endpoint expects — e.g. nesting flat filter keys under `search`.
+    const payload = typeof list.params === 'function' ? list.params({ ...params }) : params;
+    const result = await http.request(list.endpoint, { method: listMethod, payload, operation: list.operation || list.endpoint });
     if (!result.success) throw new Error(result.error);
     return result.data;
   };
