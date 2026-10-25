@@ -40,7 +40,7 @@ await table.load();
 - One instance per container, no globals; call `destroy()` to remove listeners.
 - Selection is scoped to the currently rendered page — it does not persist across pages.
 - Messages are overridable with `setMessages({...})` (see `src/core/i18n.js` for keys).
-- Licensed MIT, published to GitHub Packages (`@maatify` scope) — see "Installing" below.
+- Proprietary to Maatify (see [LICENSE](LICENSE)); published to GitHub Packages under the `@maatify` scope — see "Installing" below.
 
 ## A full list/CRUD page
 
@@ -108,4 +108,9 @@ admin-kernel, and what it deliberately does not: `docs/PARITY.md`.
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+**Proprietary — © 2026 Maatify, all rights reserved.** This is not open-source
+software, and the repository being publicly visible does not make it so. No
+rights to use, copy, modify, distribute or commercially exploit it are granted
+without prior written authorisation from Maatify.
+
+See [LICENSE](LICENSE) for the full terms. Licensing contact: support@maatify.dev
