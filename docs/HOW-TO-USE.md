@@ -360,3 +360,86 @@ await page.saveTranslation(rowId, newValue);
 If a page only needs the table (no filters, no actions, you already have your
 own `fetch` wrapper), skip `createCrudPage` and call `createDataTable`
 directly — see the example in the main `README.md`.
+
+## 10. Matching your existing table skin
+
+The table ships one default look. If your admin panel already has a table
+style, you will not match it with CSS alone — colour you can override from a
+stylesheet, but icons and a sort affordance are *structure*, and structure the
+markup never emits cannot be added from outside. So there are two knobs, and
+most hosts need both.
+
+### `classes` — every slot, replaceable
+
+`defaultTableClasses` names all 41 slots the table emits. Pass `classes` to
+replace them per slot:
+
+```js
+import { createCrudPage, defaultTableClasses } from '@maatify/admin-crud';
+
+createCrudPage({
+  table: {
+    container: '#table',
+    columns: [...],
+    classes: {
+      // replace outright
+      container: 'rounded-xl bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-700',
+      // or compose onto the default
+      th: `${defaultTableClasses.th} dark:text-slate-500`,
+      td: `${defaultTableClasses.td} dark:text-slate-200`,
+    },
+  },
+});
+```
+
+A slot you don't mention keeps its default, and a slot set to `''` renders with
+no `class` attribute at all.
+
+The default set is deliberately light on `dark:` variants — `tbody`, borders and
+most text colours have none — which is exactly what makes a table look broken
+in a dark theme next to tables that do. `classes` is how you fill that in.
+
+The slot names, grouped: `container`, `header`, `customFilters`, `tableWrap`,
+`table` · `exportGroup`, `exportButton` · `theadRow`, `th`, `selectAllCell`,
+`selectAllCheckbox` · `tr`, `trSelected`, `trStriped`, `td`, `tdRendered`,
+`tdEmptyValue`, `emptyValue`, `tdImage`, `image`, `checkboxCell`, `rowCheckbox`,
+`notSelectable` · `emptyCell`, `emptyTitle`, `emptyHint` · `footer`,
+`footerStart`, `pageInfo`, `perPageLabel`, `perPageSelect`, `pagination`,
+`pageButton`, `pageButtonActive`, `pageButtonInactive`, `navButton`,
+`navButtonDisabled` · `errorBox`, `errorTitle`, `errorText`, `retryButton`.
+
+### Renderers — for the parts whose structure differs
+
+Three optional renderers replace a part's markup wholesale. Each returns
+**trusted HTML**, the same contract as `column.render`:
+
+| Option | Replaces | Gets |
+|---|---|---|
+| `renderHeaderCell(column, ctx)` | one `<th>` | `ctx.classes`, `ctx.index`, `ctx.label` |
+| `renderExportButtons(ctx)` | the export group's contents | `ctx.classes`, `ctx.kinds` (`['csv','excel','print']`) |
+| `renderPaginationButton(ctx)` | one pagination `<li>` | `ctx.classes`, `ctx.page`, `ctx.text`, `ctx.label`, `ctx.active`, `ctx.disabled`, `ctx.kind` (`'page'｜'first'｜'prev'｜'next'｜'last'`) |
+
+```js
+table: {
+  // a sortable header with your own chevron
+  renderHeaderCell: (column, { classes, label }) => html`
+    <th data-key="${column.key}" class="${classes.th} dark:text-slate-500 hover:text-slate-700">
+      ${label}${raw(CHEVRON_SVG)}
+    </th>`,
+
+  // the grouped pill of icon buttons your panel uses elsewhere
+  renderExportButtons: ({ kinds }) =>
+    kinds.map((kind) => html`<button type="button" data-export="${kind}" class="pill">${raw(ICONS[kind])}${LABELS[kind]}</button>`).join(''),
+}
+```
+
+> **Keep the `data-*` attributes.** The table drives itself by delegation on
+> `[data-page]` and `[data-export]`. A renderer that drops them produces markup
+> that looks right and does nothing — paging and export silently stop working.
+> There is a test for exactly that failure mode.
+
+### Nothing changes if you pass neither
+
+Default output is byte-for-byte what it was before theming existed, across the
+populated, empty, selection and error states — asserted in
+`test/table-theming.test.js`.
