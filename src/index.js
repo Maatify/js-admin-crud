@@ -11,6 +11,7 @@ export { confirm } from './ui/confirm.js';
 export { createLoadingOverlay } from './ui/loading.js';
 export { createDataTable } from './table/data-table.js';
 export { createSelection } from './table/selection.js';
+export { defaultTableClasses } from './table/table-classes.js';
 export { pageInfo, pageWindow } from './table/pagination.js';
 export { toCsv, toHtmlTable, neutralizeFormula } from './table/export.js';
 export { buildParams } from './filters/build-params.js';

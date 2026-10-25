@@ -4,8 +4,17 @@ import { showAlert } from '../ui/alerts.js';
 import { exportCsv, exportExcel, exportPrint } from './export.js';
 import { pageInfo, pageWindow } from './pagination.js';
 import { createSelection } from './selection.js';
+import { defaultTableClasses } from './table-classes.js';
 
 const PAGE_SIZES = [10, 25, 50, 100];
+const EXPORT_KINDS = [
+  { kind: 'csv', messageKey: 'table.export_csv' },
+  { kind: 'excel', messageKey: 'table.export_excel' },
+  { kind: 'print', messageKey: 'table.export_print' },
+];
+
+/** ` class="x"`, or nothing at all when the slot's class is empty. */
+const attrClass = (value) => (value ? ` class="${value}"` : '');
 
 /**
  * Instance-based data table (no module-level state, one instance per container).
@@ -25,6 +34,21 @@ const PAGE_SIZES = [10, 25, 50, 100];
  *  - rowActionSelector: override the '[data-action]' convention
  *  - notify(type, message) => alert function (defaults to showAlert)
  *  - document / window: injectable for tests
+ *
+ * Theming (see docs/HOW-TO-USE.md §10 and #37):
+ *  - classes: { [slot]: 'classes' } — replaces `defaultTableClasses` per slot, so
+ *    a host can match its own skin, dark variants included. Compose with
+ *    `defaultTableClasses.<slot>` to extend rather than replace.
+ *  - renderHeaderCell(column, { classes, index, label }) => TRUSTED html for one <th>
+ *  - renderExportButtons({ classes, kinds }) => TRUSTED html for the export group's
+ *    contents; each button must keep its `data-export` attribute
+ *  - renderPaginationButton({ page, label, text, active, disabled, kind, classes })
+ *    => TRUSTED html for one <li>; the button must keep its `data-page` attribute
+ *
+ * Those three exist because classes alone cannot add structure the default
+ * markup never emits (icons, a sort affordance). Delegation is driven by the
+ * data-* attributes above, so a custom renderer that drops them stops working.
+ *
  * Cell values are escaped unless the column has a `render`, whose return value is trusted HTML.
  */
 export function createDataTable(options) {
@@ -36,6 +60,7 @@ export function createDataTable(options) {
   const notify = options.notify || ((type, msg) => showAlert(type, msg));
   const selection = createSelection({ selectableIds: options.selectableIds });
   const rowActionSelector = options.rowActionSelector || '[data-action]';
+  const c = { ...defaultTableClasses, ...(options.classes || {}) };
   const state = { params: { page: 1, per_page: 10, ...(options.params || {}) }, data: [], pagination: null };
   const controller = new AbortController();
 
@@ -44,32 +69,65 @@ export function createDataTable(options) {
     return null;
   }
 
-  const labels = columns.map((c) => c.label ?? c.key);
-  const keys = columns.map((c) => c.key);
+  const labels = columns.map((col) => col.label ?? col.key);
+  const keys = columns.map((col) => col.key);
 
   function cell(column, row) {
     const value = row[column.key];
-    if (typeof column.render === 'function') return `<td class="ps-3">${column.render(value, row)}</td>`;
+    if (typeof column.render === 'function') return `<td${attrClass(c.tdRendered)}>${column.render(value, row)}</td>`;
     if (value === undefined || value === null || value === '') {
-      return `<td><span class="text-gray-400 italic text-sm">${escapeHtml(t('table.empty_value'))}</span></td>`;
+      return `<td${attrClass(c.tdEmptyValue)}><span${attrClass(c.emptyValue)}>${escapeHtml(t('table.empty_value'))}</span></td>`;
     }
     if (column.key === 'image' || column.key === 'icon') {
       const src = safeUrl(value);
-      return src ? `<td><img src="${escapeHtml(src)}" alt="" class="w-12 h-12 object-cover rounded"/></td>` : '<td></td>';
+      return src
+        ? `<td${attrClass(c.tdImage)}><img src="${escapeHtml(src)}" alt=""${attrClass(c.image)}/></td>`
+        : `<td${attrClass(c.tdImage)}></td>`;
     }
-    return `<td class="ps-3 text-sm">${escapeHtml(value)}</td>`;
+    return `<td${attrClass(c.td)}>${escapeHtml(value)}</td>`;
   }
 
   function rowHtml(row, idx) {
     const id = String(row[primaryKey]);
     const isSelected = selection.has(id);
-    const cls = isSelected ? 'bg-blue-100 dark:bg-blue-900/20' : idx % 2 ? 'bg-gray-100 dark:bg-gray-700/20' : '';
+    const cls = isSelected ? c.trSelected : idx % 2 ? c.trStriped : '';
     let box = '';
     if (options.selection) {
       const can = selection.canSelect(id);
-      box = `<td class="ps-4">${can ? `<input type="checkbox" class="row-checkbox w-4 h-4" value="${escapeHtml(id)}" ${isSelected ? 'checked' : ''}>` : '<span class="text-gray-300 text-xs">—</span>'}</td>`;
+      box = `<td${attrClass(c.checkboxCell)}>${can ? `<input type="checkbox" class="${c.rowCheckbox}" value="${escapeHtml(id)}" ${isSelected ? 'checked' : ''}>` : `<span${attrClass(c.notSelectable)}>—</span>`}</td>`;
     }
-    return `<tr class="${cls} transition-colors duration-150 hover:bg-blue-200/50 dark:hover:bg-blue-900/20">${box}${columns.map((c) => cell(c, row)).join('')}</tr>`;
+    return `<tr class="${cls} ${c.tr}">${box}${columns.map((col) => cell(col, row)).join('')}</tr>`;
+  }
+
+  /** One <th>. Replaceable wholesale, since a sort affordance is structure, not colour. */
+  function headerCell(column, index) {
+    const label = column.label ?? column.key;
+    if (typeof options.renderHeaderCell === 'function') {
+      return String(options.renderHeaderCell(column, { classes: c, index, label }));
+    }
+    return `<th${attrClass(c.th)}>${escapeHtml(label)}</th>`;
+  }
+
+  /** The export group's contents. Buttons must keep their data-export attribute. */
+  function exportButtons() {
+    if (typeof options.renderExportButtons === 'function') {
+      return String(options.renderExportButtons({ classes: c, kinds: EXPORT_KINDS.map((e) => e.kind) }));
+    }
+    return EXPORT_KINDS.map(
+      ({ kind, messageKey }) => `<button type="button" data-export="${kind}"${attrClass(c.exportButton)}>${escapeHtml(t(messageKey))}</button>`,
+    ).join('\n      ');
+  }
+
+  /** One pagination <li>. The button must keep its data-page attribute. */
+  function paginationButton(ctx) {
+    if (typeof options.renderPaginationButton === 'function') {
+      return String(options.renderPaginationButton({ ...ctx, classes: c }));
+    }
+    const { page, label, text, active, disabled, kind } = ctx;
+    if (kind === 'page') {
+      return `<li><button type="button" data-page="${page}" class="${c.pageButton} ${active ? c.pageButtonActive : c.pageButtonInactive}" ${active ? 'aria-current="page" disabled' : ''}>${escapeHtml(text)}</button></li>`;
+    }
+    return `<li><button type="button" data-page="${page}" aria-label="${escapeHtml(label)}" class="${c.navButton} ${disabled ? c.navButtonDisabled : ''}" ${disabled ? 'disabled' : ''}>${text}</button></li>`;
   }
 
   function render() {
@@ -79,32 +137,30 @@ export function createDataTable(options) {
     const infoHtml = custom ? custom.info : escapeHtml(info.text); // custom info is trusted HTML by contract
     const total = custom ? custom.total : info.total;
     const totalPages = Math.ceil(total / info.perPage) || 1;
-    const head = columns.map((c) => `<th class="pe-6 ps-3 py-3 text-xs font-semibold uppercase tracking-wider text-gray-400">${escapeHtml(c.label ?? c.key)}</th>`).join('');
-    const selAll = options.selection ? '<th class="w-10 ps-4 py-3"><input type="checkbox" id="select-all" class="w-4 h-4"></th>' : '';
+    const head = columns.map(headerCell).join('');
+    const selAll = options.selection ? `<th${attrClass(c.selectAllCell)}><input type="checkbox" id="select-all"${attrClass(c.selectAllCheckbox)}></th>` : '';
     const colspan = columns.length + (options.selection ? 1 : 0);
     const body = data.length
       ? data.map(rowHtml).join('')
-      : `<tr><td colspan="${colspan}" class="py-16 text-center"><p class="text-sm font-medium text-gray-400">${escapeHtml(t('table.empty_title'))}</p><p class="text-xs text-gray-300">${escapeHtml(t('table.empty_hint'))}</p></td></tr>`;
+      : `<tr><td colspan="${colspan}"${attrClass(c.emptyCell)}><p${attrClass(c.emptyTitle)}>${escapeHtml(t('table.empty_title'))}</p><p${attrClass(c.emptyHint)}>${escapeHtml(t('table.empty_hint'))}</p></td></tr>`;
     const pages = pageWindow(info.page, totalPages)
-      .map((p) => `<li><button type="button" data-page="${p}" class="min-w-[36px] h-9 px-2 rounded-lg text-sm ${p === info.page ? 'bg-blue-500 text-white font-semibold' : 'text-gray-500 hover:bg-gray-100'}" ${p === info.page ? 'aria-current="page" disabled' : ''}>${p}</button></li>`)
+      .map((p) => paginationButton({ page: p, text: String(p), label: String(p), active: p === info.page, disabled: p === info.page, kind: 'page' }))
       .join('');
-    const nav = (label, page, disabled, text) => `<li><button type="button" data-page="${page}" aria-label="${escapeHtml(label)}" class="w-9 h-9 rounded-lg border border-gray-300 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}" ${disabled ? 'disabled' : ''}>${text}</button></li>`;
+    const nav = (kind, label, page, disabled, text) => paginationButton({ page, label, text, active: false, disabled, kind });
     const sizes = PAGE_SIZES.map((n) => `<option value="${n}" ${n === info.perPage ? 'selected' : ''}>${n}</option>`).join('');
     container.innerHTML = `
-<div class="table-container bg-white dark:bg-gray-800 rounded-lg py-4 shadow-lg border border-gray-100 dark:border-gray-700">
-  <div class="tableHeader flex flex-wrap justify-between items-center mb-4 gap-4 px-3">
-    <div id="table-custom-filters" class="flex-1 flex justify-start"></div>
-    <div class="flex items-center gap-1.5">
-      <button type="button" data-export="csv" class="text-xs px-3 py-1.5 border rounded-md">${escapeHtml(t('table.export_csv'))}</button>
-      <button type="button" data-export="excel" class="text-xs px-3 py-1.5 border rounded-md">${escapeHtml(t('table.export_excel'))}</button>
-      <button type="button" data-export="print" class="text-xs px-3 py-1.5 border rounded-md">${escapeHtml(t('table.export_print'))}</button>
+<div${attrClass(c.container)}>
+  <div${attrClass(c.header)}>
+    <div id="table-custom-filters"${attrClass(c.customFilters)}></div>
+    <div${attrClass(c.exportGroup)}>
+      ${exportButtons()}
     </div>
   </div>
-  <div class="overflow-x-auto"><table class="min-w-full"><thead><tr class="border-b-2 border-gray-200">${selAll}${head}</tr></thead><tbody>${body}</tbody></table></div>
-  <footer class="pt-4 p-5 flex flex-wrap justify-between items-center gap-4 border-t border-gray-100">
-    <div class="flex items-center gap-3"><span class="text-sm text-gray-600" data-page-info>${infoHtml}</span>
-      <label class="text-xs text-gray-400">${escapeHtml(t('table.rows'))} <select data-per-page class="h-7 border rounded-md text-sm">${sizes}</select></label></div>
-    <nav><ul class="pagination flex flex-wrap items-center gap-1">${totalPages > 1 ? nav('First', 1, info.page <= 1, '«') + nav('Previous', info.page - 1, info.page <= 1, '‹') + pages + nav('Next', info.page + 1, info.page >= totalPages, '›') + nav('Last', totalPages, info.page >= totalPages, '»') : ''}</ul></nav>
+  <div${attrClass(c.tableWrap)}><table${attrClass(c.table)}><thead><tr${attrClass(c.theadRow)}>${selAll}${head}</tr></thead><tbody>${body}</tbody></table></div>
+  <footer${attrClass(c.footer)}>
+    <div${attrClass(c.footerStart)}><span${attrClass(c.pageInfo)} data-page-info>${infoHtml}</span>
+      <label${attrClass(c.perPageLabel)}>${escapeHtml(t('table.rows'))} <select data-per-page${attrClass(c.perPageSelect)}>${sizes}</select></label></div>
+    <nav><ul${attrClass(c.pagination)}>${totalPages > 1 ? nav('first', 'First', 1, info.page <= 1, '«') + nav('prev', 'Previous', info.page - 1, info.page <= 1, '‹') + pages + nav('next', 'Next', info.page + 1, info.page >= totalPages, '›') + nav('last', 'Last', totalPages, info.page >= totalPages, '»') : ''}</ul></nav>
   </footer>
 </div>`;
     syncSelectAll();
@@ -182,7 +238,7 @@ export function createDataTable(options) {
       if (mine !== token) return null;
       const message = error?.message || t('table.load_error_default');
       notify('danger', message);
-      container.innerHTML = `<div class="rounded-lg p-8 text-center"><h3 class="text-lg font-medium text-red-600">${escapeHtml(t('table.load_error_title'))}</h3><p class="text-sm text-gray-600">${escapeHtml(message)}</p><button type="button" data-retry class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">${escapeHtml(t('table.retry'))}</button></div>`;
+      container.innerHTML = `<div${attrClass(c.errorBox)}><h3${attrClass(c.errorTitle)}>${escapeHtml(t('table.load_error_title'))}</h3><p${attrClass(c.errorText)}>${escapeHtml(message)}</p><button type="button" data-retry${attrClass(c.retryButton)}>${escapeHtml(t('table.retry'))}</button></div>`;
       return { success: false, error: message };
     }
   }

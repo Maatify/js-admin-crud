@@ -92,6 +92,12 @@ bindFormAction(form, {
 });
 ```
 
+`defaultTableClasses` + the table's `classes` option let a host replace any of the 41 class
+slots the table emits (including the `dark:` variants the default set leaves thin), and
+`renderHeaderCell` / `renderExportButtons` / `renderPaginationButton` replace the markup of
+the parts whose *structure* differs — icons, a sort affordance. Passing neither leaves the
+output exactly as it was. See `docs/HOW-TO-USE.md` §10.
+
 `actionButton()` and `statusBadge()` build row-action markup that is escaped by construction —
 use them (or `` html`…` ``) inside `column.render`, whose return value the table trusts as raw HTML:
 
