@@ -92,13 +92,16 @@ createCrudPage({
 
 ## 6. Decisions
 
-- **Ownership/licence:** repo stays under the personal account; Maatify has the right
-  to use the library in its projects.
+- **Ownership/licence:** the repository lives under the `Maatify` organisation and the
+  library is released under the MIT licence (see `LICENSE`). This supersedes the earlier
+  plan of keeping the repo on a personal account with Maatify holding usage rights —
+  under MIT the usage-rights carve-out is unnecessary.
 - **RTL:** required. The admin must support RTL, not just LTR — see defect #10 in §3.
-- **Delivery:** npm package (e.g. GitHub Packages), not vendored `dist/`. There is no
-  single host to vendor into anymore — future admin projects each run
-  `npm install @maatify/admin-crud`. Remove `"private": true` from `package.json`
-  (or configure the GitHub Packages registry) before the first publish.
+- **Delivery:** npm package published to GitHub Packages, not vendored `dist/`. There is
+  no single host to vendor into anymore — future admin projects each run
+  `npm install @maatify/admin-crud`. `"private": true` has been removed and
+  `publishConfig.registry` points at `https://npm.pkg.github.com`. Installing straight
+  from Git also works, because `prepare` builds `dist/` on install (#24).
 - **No compat layer.** `compat/globals.js` (legacy `window.AdminPageBridge`/`ApiHandler`
   globals) is dropped from the proposed layout — there is no athar-platform migration
   to support it for.
