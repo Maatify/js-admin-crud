@@ -15,10 +15,13 @@ import { runMutation } from '../actions/run-mutation.js';
  *  - filters: bindFilters() options, minus `onApply` (reloads the table)
  *  - list: { endpoint } — GET endpoint the table fetches pages from
  *  - actions: { name: runMutation() options } — call as page.actions.name(overrides)
+ *  - onRowAction(action, { id, row, dataset, element }) — row-action handler, passed
+ *    straight to the table (may also be given as `table.onRowAction`; this wins).
+ *    It fires on the table's own delegated listener, so a page never adds its own.
  *  - messages: { [locale]: { ...i18n keys } }; `locale`/`http.locale()` selects which
  */
 export function createCrudPage(config = {}) {
-  const { http: httpConfig = {}, table: tableConfig = {}, filters: filtersConfig, list = {}, actions = {}, messages, locale } = config;
+  const { http: httpConfig = {}, table: tableConfig = {}, filters: filtersConfig, list = {}, actions = {}, messages, locale, onRowAction } = config;
 
   if (messages) {
     const activeLocale = locale || (typeof httpConfig.locale === 'function' ? httpConfig.locale() : httpConfig.locale);
@@ -33,7 +36,7 @@ export function createCrudPage(config = {}) {
     return result.data;
   };
 
-  const table = createDataTable({ ...tableConfig, fetchPage });
+  const table = createDataTable({ ...tableConfig, fetchPage, ...(onRowAction ? { onRowAction } : {}) });
   if (!table) return null;
 
   const unbindFilters = filtersConfig

@@ -95,7 +95,7 @@ const page = createCrudPage({
         key: 'id',
         label: 'Actions',
         render: (id, row) => html`
-          ${actionButton({ action: 'sort', id, label: 'Sort', data: { value: row.sort_order ?? 0 } })}
+          ${actionButton({ action: 'sort', id, label: 'Sort' })}
           ${actionButton({ action: 'delete', id, label: 'Delete', className: 'text-xs px-3 py-1.5 border rounded-md text-red-600' })}
         `,
       },
@@ -117,33 +117,28 @@ const page = createCrudPage({
     toggle: { endpoint: 'languages/set-active', successMessage: 'Status updated' },
     delete: { endpoint: 'languages/delete', confirmMessage: 'Delete this language?', successMessage: 'Deleted' },
   },
+
+  // Row actions run on the table's own delegated listener — you never add one.
+  // `action` is the clicked element's data-action; `id` is already the row's
+  // primary key, correctly typed, and `row` is the whole loaded record.
+  onRowAction(action, { id, row, dataset }) {
+    if (action === 'toggle') {
+      page.actions.toggle({ payload: { id, active: Number(dataset.next) } });
+    } else if (action === 'delete') {
+      page.actions.delete({ payload: { id } });
+    } else if (action === 'sort') {
+      openSortModal({
+        http: page.http,
+        endpoint: 'languages/set-sort-order',
+        id,
+        currentValue: row.sort_order ?? 0,
+        reload: () => page.table.reload(),
+      });
+    }
+  },
 });
 
 await page.table.load();
-
-// The table doesn't know what your action buttons mean — wire them yourself,
-// delegated on the same container you gave the table. `row` already carried
-// every attribute you need onto the button in the render() above.
-document.querySelector('#languages-table').addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  const id = Number(btn.dataset.id);
-
-  if (btn.dataset.action === 'toggle') {
-    // statusBadge put the value to flip to in data-next
-    page.actions.toggle({ payload: { id, active: Number(btn.dataset.next) } });
-  } else if (btn.dataset.action === 'delete') {
-    page.actions.delete({ payload: { id } });
-  } else if (btn.dataset.action === 'sort') {
-    openSortModal({
-      http: page.http,
-      endpoint: 'languages/set-sort-order',
-      id,
-      currentValue: Number(btn.dataset.value),
-      reload: () => page.table.reload(),
-    });
-  }
-});
 
 document.querySelector('#create-language').addEventListener('click', () => {
   openCreateModal();
@@ -188,6 +183,18 @@ Walking through the config:
   object under each key is `runMutation()`'s config (endpoint, method,
   confirmMessage, successMessage, onSuccess, …); `overrides` is merged over
   it per call, which is where you pass the actual `payload`.
+- **`onRowAction(action, { id, row, dataset, element })`** — fires when
+  anything matching `[data-action]` is clicked inside the table. It runs on
+  the **table's own** delegated listener, so a page never calls
+  `container.addEventListener('click', …)` itself; one listener handles
+  pagination, export, retry *and* row actions. `id` is the matching row's
+  primary key as it came from the API (a number stays a number — no
+  `Number(btn.dataset.id)`), `row` is the whole loaded record, `dataset` is a
+  copy of the element's `data-*`, and `element` is the clicked element.
+  `row` is `null` (and `id` the raw string) when no loaded row matches the
+  `data-id`. Referring to `page` inside the handler is fine — the body only
+  runs after `createCrudPage` has returned. Override the `[data-action]`
+  convention with `table.rowActionSelector` if a page needs a different one.
 
 ## 4. Confirm-before-destructive-action
 

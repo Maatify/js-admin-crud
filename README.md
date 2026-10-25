@@ -56,10 +56,18 @@ const page = createCrudPage({
   filters: { form: '#filters', search: '#global-search' },
   list: { endpoint: 'languages/query' },
   actions: { setActive: { endpoint: 'languages/set-active', successMessage: 'Updated' } },
+  // Runs on the table's own delegated listener — no second click handler per page.
+  onRowAction: (action, { id, row }) => {
+    if (action === 'toggle') page.actions.setActive({ payload: { id, active: row.active ? 0 : 1 } });
+  },
 });
 await page.table.load();
 await page.actions.setActive({ payload: { id: 5, active: true } });
 ```
+
+`onRowAction(action, { id, row, dataset, element })` fires for any `[data-action]`
+element clicked inside the table; `id` arrives already typed from the row, so there
+is no `Number(btn.dataset.id)` and no `container.addEventListener` to write.
 
 `createTranslationsPage` is the same shape plus a required `update` action, exposed
 as the convenience `saveTranslation(id, value)`.

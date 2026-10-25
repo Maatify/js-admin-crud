@@ -17,6 +17,12 @@ const PAGE_SIZES = [10, 25, 50, 100];
  *  - params: initial request params ({page, per_page, ...filters})
  *  - primaryKey ('id'), selection (false), selectableIds (Set|Array|null)
  *  - onSelectionChange(Set), getPaginationInfo(pagination, params) => ({total, info: TRUSTED html})
+ *  - onRowAction(action, { id, row, dataset, element }) — called when an element
+ *    matching `rowActionSelector` ('[data-action]') is clicked inside the table.
+ *    Runs on the table's own delegated listener, so consumers never add a second
+ *    one. `id` is the matching row's primaryKey value (correctly typed), falling
+ *    back to the raw data-id string when no loaded row matches; `row` is null then.
+ *  - rowActionSelector: override the '[data-action]' convention
  *  - notify(type, message) => alert function (defaults to showAlert)
  *  - document / window: injectable for tests
  * Cell values are escaped unless the column has a `render`, whose return value is trusted HTML.
@@ -29,6 +35,7 @@ export function createDataTable(options) {
   const primaryKey = options.primaryKey || 'id';
   const notify = options.notify || ((type, msg) => showAlert(type, msg));
   const selection = createSelection({ selectableIds: options.selectableIds });
+  const rowActionSelector = options.rowActionSelector || '[data-action]';
   const state = { params: { page: 1, per_page: 10, ...(options.params || {}) }, data: [], pagination: null };
   const controller = new AbortController();
 
@@ -114,7 +121,14 @@ export function createDataTable(options) {
 
   const notifySelection = () => options.onSelectionChange && options.onSelectionChange(selection.toSet());
 
-  // One delegated listener set per instance, removed by destroy().
+  /** The loaded row whose primary key matches a button's data-id, if any. */
+  function findRow(rawId) {
+    if (rawId === undefined || rawId === null) return null;
+    return state.data.find((r) => String(r[primaryKey]) === rawId) || null;
+  }
+
+  // One delegated listener set per instance, removed by destroy(). Row actions
+  // share it rather than needing a second listener on the same container.
   const opts = { signal: controller.signal };
   container.addEventListener('click', (e) => {
     const pageBtn = e.target.closest('[data-page]');
@@ -125,8 +139,17 @@ export function createDataTable(options) {
       if (kind === 'csv') exportCsv(doc, labels, keys, state.data);
       else if (kind === 'excel') exportExcel(doc, labels, keys, state.data);
       else exportPrint(win, labels, keys, state.data);
+      return;
     }
-    if (e.target.closest('[data-retry]')) load();
+    if (e.target.closest('[data-retry]')) return void load();
+    if (typeof options.onRowAction !== 'function') return;
+    const actionEl = e.target.closest(rowActionSelector);
+    if (!actionEl || actionEl.disabled) return;
+    const row = findRow(actionEl.dataset.id);
+    // Prefer the row's own primary key so handlers get it correctly typed,
+    // instead of the string every dataset read returns.
+    const id = row ? row[primaryKey] : actionEl.dataset.id;
+    options.onRowAction(actionEl.dataset.action, { id, row, dataset: { ...actionEl.dataset }, element: actionEl });
   }, opts);
   container.addEventListener('change', (e) => {
     if (e.target.matches('[data-per-page]')) return void load({ per_page: Number(e.target.value), page: 1 });

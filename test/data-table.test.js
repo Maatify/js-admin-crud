@@ -12,6 +12,88 @@ beforeEach(() => {
 const cols = [{ key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }];
 const page = (data, p = 1, total = data.length) => ({ data, pagination: { page: p, per_page: 10, total } });
 
+describe('createDataTable onRowAction', () => {
+  const actionCols = [
+    { key: 'id', label: 'ID' },
+    { key: 'name', label: 'Name', render: (v, row) => `<button data-action="edit" data-id="${row.id}" data-tier="gold">E</button>` },
+  ];
+
+  it('fires for a clicked row action with the typed id and the row', async () => {
+    const onRowAction = vi.fn();
+    const t = createDataTable({ container: el, columns: actionCols, fetchPage: async () => page([{ id: 7, name: 'n' }]), onRowAction });
+    await t.load();
+    el.querySelector('[data-action="edit"]').click();
+    expect(onRowAction).toHaveBeenCalledTimes(1);
+    const [action, ctx] = onRowAction.mock.calls[0];
+    expect(action).toBe('edit');
+    expect(ctx.id).toBe(7); // the row's own value, not the '7' string from dataset
+    expect(ctx.row).toEqual({ id: 7, name: 'n' });
+    expect(ctx.dataset.tier).toBe('gold');
+    expect(ctx.element.tagName).toBe('BUTTON');
+  });
+
+  it('uses the table\'s existing listener — no second listener is added', async () => {
+    const spy = vi.spyOn(el, 'addEventListener');
+    const t = createDataTable({ container: el, columns: actionCols, fetchPage: async () => page([{ id: 1, name: 'n' }]), onRowAction: vi.fn() });
+    await t.load();
+    expect(spy.mock.calls.filter(([type]) => type === 'click')).toHaveLength(1);
+    spy.mockRestore();
+  });
+
+  it('does not fire for the table\'s own pagination, export or retry controls', async () => {
+    const onRowAction = vi.fn();
+    const t = createDataTable({ container: el, columns: actionCols, fetchPage: async (p) => page([{ id: 1, name: 'n' }], p.page, 95), onRowAction });
+    await t.load();
+    el.querySelector('[data-page="2"]').click();
+    await flush();
+    // jsdom has no URL.createObjectURL; the export path would throw before we
+    // get to assert anything about onRowAction.
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    el.querySelector('[data-export="csv"]').click();
+    expect(onRowAction).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the raw data-id when no loaded row matches', async () => {
+    const onRowAction = vi.fn();
+    const t = createDataTable({
+      container: el,
+      columns: [{ key: 'id', label: 'ID', render: () => '<button data-action="bulk" data-id="999">B</button>' }],
+      fetchPage: async () => page([{ id: 1 }]),
+      onRowAction,
+    });
+    await t.load();
+    el.querySelector('[data-action="bulk"]').click();
+    expect(onRowAction.mock.calls[0][1]).toMatchObject({ id: '999', row: null });
+  });
+
+  it('ignores disabled action elements and honours rowActionSelector', async () => {
+    const onRowAction = vi.fn();
+    const t = createDataTable({
+      container: el,
+      columns: [{ key: 'id', label: 'ID', render: (v) => `<button data-action="a" data-id="${v}" disabled>A</button><button data-row-action="b" data-action="b" data-id="${v}">B</button>` }],
+      fetchPage: async () => page([{ id: 1 }]),
+      rowActionSelector: '[data-row-action]',
+      onRowAction,
+    });
+    await t.load();
+    el.querySelector('[disabled]').click();
+    expect(onRowAction).not.toHaveBeenCalled();
+    el.querySelector('[data-row-action]').click();
+    expect(onRowAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops firing after destroy()', async () => {
+    const onRowAction = vi.fn();
+    const t = createDataTable({ container: el, columns: actionCols, fetchPage: async () => page([{ id: 1, name: 'n' }]), onRowAction });
+    await t.load();
+    const btn = el.querySelector('[data-action="edit"]');
+    t.destroy();
+    btn.click();
+    expect(onRowAction).not.toHaveBeenCalled();
+  });
+});
+
 describe('createDataTable', () => {
   it('escapes cell values (no markup injection)', async () => {
     const t = createDataTable({ container: el, columns: cols, fetchPage: async () => page([{ id: 1, name: '<img src=x onerror=alert(1)>' }]) });
