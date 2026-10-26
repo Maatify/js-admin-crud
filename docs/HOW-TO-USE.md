@@ -485,3 +485,40 @@ actionButton({ action: 'edit', id: row.id, label: 'Edit', color: 'blue', icon: r
 `className`; an unknown key is ignored. `icon` is markup **only** when it is a
 `SafeHtml` from `raw`/`html` — a plain string is escaped, so interpolating
 untrusted text cannot inject markup. `statusBadge` takes both too.
+
+## 11. Searchable select
+
+`createSelect` is the admin kernel's `select2.js` ported in — dependency-free,
+despite the name it never used the jQuery plugin.
+
+```js
+import { createSelect } from '@maatify/admin-crud';
+
+const languages = createSelect('#language-filter', {
+  data: [{ value: 1, label: 'English', search: 'en' }, { value: 2, label: 'Arabic', search: 'ar' }],
+  value: 1,                       // initial selection; does not fire onChange
+  onChange: (item) => page.table.load({ page: 1, language_id: item.value }),
+});
+
+languages.getValue();             // 1
+languages.setValue(2);            // selects, or clears when the value is unknown
+languages.setData(nextOptions);   // keeps the selection only if it still exists
+languages.destroy();              // removes every listener, document ones included
+```
+
+**It works on an empty container or on markup you already have.** Given an empty
+element it builds the whole widget; given an element that already contains the
+kernel's hooks — `.js-select-box`, `.js-select-input`, `.js-dropdown`,
+`.js-search-input`, `.js-select-list`, `.js-arrow` — it enhances those instead,
+so an existing Twig template migrates without being touched.
+
+`search` on an option is an extra haystack beside the label, which is how a code
+like `en` finds `English`. Styling goes through `classes`, same contract as the
+table: `defaultSelectClasses` names every slot (`box`, `boxOpen`, `boxClosed`,
+`input`, `arrow`, `arrowOpen`, `dropdown`, `search`, `list`, `option`,
+`optionSelected`, `check`, `empty`).
+
+Two things the original did that this does not: it interpolated option labels
+into `innerHTML` **unescaped** — a stored-XSS hole for any label coming from an
+API — and its `destroy()` left the box, search and list listeners attached. Both
+are fixed; labels are escaped and teardown is complete.
