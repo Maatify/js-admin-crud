@@ -178,27 +178,37 @@ consumers in athar-platform, so nothing depends on the exact shape.
 
 ## 5. Widgets: select2, wysiwyg, datetime-picker, Input_checker
 
-**Decision: all four stay the host application's responsibility.** They are not
-part of the CRUD/table/filter problem this library solves, three of the four wrap
-a third-party dependency (jQuery/Select2, an editor, a date library), and pulling
-them in would force that dependency on every consumer of a library that currently
-has **zero** runtime dependencies.
+**Decision (revised): `select2.js` is now in the library as `createSelect`; the
+other three stay the host application's responsibility.**
+
+The original decision lumped all four together on the grounds that they wrap a
+third-party dependency. That was **wrong for `select2.js`**: despite its name it
+never used the jQuery plugin — it is 218 lines of dependency-free vanilla JS
+whose only tie to anything was `window.Select2 =` on its last line. So it has
+been ported (see `createSelect` in `docs/HOW-TO-USE.md`), with two defects of
+the original fixed: option labels were interpolated into innerHTML unescaped,
+and `destroy()` left most of its listeners attached.
+
+The grounds do hold for the rest: `admin-wysiwyg.js` wraps an editor,
+`datetime-picker.js` is a flatpickr wrapper, and `Input_checker.js` is form
+validation rather than a table concern. Bringing any of them in would force a
+runtime dependency on a library that has **zero** today.
 
 Correcting #25's own table, which listed all four as unused — two of them are
 very much in use:
 
 | File | Uses | Note |
 |---|---|---|
-| `select2.js` | **11** | real call sites, e.g. `Select2('#translation-filter-language-id', …)`; several are guarded by `typeof Select2 !== 'undefined'` |
+| `select2.js` | **11** | now covered by `createSelect`; real call sites, e.g. `Select2('#translation-filter-language-id', …)`; several are guarded by `typeof Select2 !== 'undefined'` |
 | `admin-wysiwyg.js` | **4** | all guarded: `if (typeof window.initWysiwyg === 'function')` |
 | `datetime-picker.js` | 0 | no reference to `datePickerAutoInit`, `datepicker` or `flatpickr` anywhere |
 | `Input_checker.js` | 0 | no reference |
 
-That usage does not change the decision — it changes the **migration plan**. A
-page using Select2 or the WYSIWYG keeps loading those two kernel files by
-`<script>` alongside the library; they do not conflict, because the library
-claims no globals of its own. The two genuinely unused files can simply be
-dropped.
+A page using the WYSIWYG keeps loading that kernel file by `<script>` alongside
+the library; they do not conflict, because the library claims no globals of its
+own. Select2's eleven call sites can move to `createSelect` as each page is
+migrated — the port reads the same markup hooks, so a template needs no change.
+The two genuinely unused files can simply be dropped.
 
 ## How to keep this current
 

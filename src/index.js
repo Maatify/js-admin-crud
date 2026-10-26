@@ -7,6 +7,7 @@ export { createEmitter } from './core/events.js';
 export { showAlert } from './ui/alerts.js';
 export { actionButton, statusBadge, actionButtonColors } from './ui/action-buttons.js';
 export { createModal } from './ui/modal.js';
+export { createSelect, defaultSelectClasses } from './ui/select.js';
 export { confirm } from './ui/confirm.js';
 export { createLoadingOverlay } from './ui/loading.js';
 export { createDataTable } from './table/data-table.js';
